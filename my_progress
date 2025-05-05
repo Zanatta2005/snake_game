@@ -1,0 +1,147 @@
+#include "ripes_system.h"
+
+#define MAX_LENGTH 100  // Maximum snake size
+
+volatile int * RGB = SWITCHES_0_BASE;
+volatile int * led = LED_MATRIX_0_BASE;
+volatile int * led2 = LED_MATRIX_0_BASE;
+volatile int * led3 = LED_MATRIX_0_BASE;
+volatile int * led4 = LED_MATRIX_0_BASE;
+volatile int * dpadR = D_PAD_0_RIGHT;
+volatile int * dpadL = D_PAD_0_LEFT;
+volatile int * dpadU = D_PAD_0_UP;
+volatile int * dpadD = D_PAD_0_DOWN;
+
+volatile int* body[MAX_LENGTH][4];  // Snake body history
+int history = 6;                    // Current snake size
+
+void printSolidRectangle(int RGB, int x, int y, int height, int width) {
+    led = LED_MATRIX_0_BASE;
+    led += x;
+    led += (y * LED_MATRIX_0_WIDTH);
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            *led = RGB;
+            led++;
+        }
+        led += LED_MATRIX_0_WIDTH;
+        led -= width;
+    }
+    led = LED_MATRIX_0_BASE;
+}
+
+void printRectangle(int RGB, int x, int y, int height, int width) {
+    led = LED_MATRIX_0_BASE;
+    led += x;
+    led += (y * LED_MATRIX_0_WIDTH);
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            if (i == 0 || i == (height - 1)) {
+                *led = RGB;
+            } else if (j == 0 || j == (width - 1)) {
+                *led = RGB;
+            }
+            led++;
+        }
+        led += LED_MATRIX_0_WIDTH;
+        led -= width;
+    }
+    led = LED_MATRIX_0_BASE;
+}
+
+void gameOver() {
+    printf("Game Over!\n");
+    exit(0);
+}
+
+int main() {
+    int color = 201;
+    int direction = 1;
+
+    printSolidRectangle(0, 0, 0, 25, 35);
+    printRectangle(201, 0, 0, 25, 35);
+
+    // Initialize head (2x2) in starting position
+    led += 3 + (3 * LED_MATRIX_0_WIDTH);
+    led2 += 3 + (4 * LED_MATRIX_0_WIDTH);
+    led3 += 2 + (3 * LED_MATRIX_0_WIDTH);
+    led4 += 2 + (4 * LED_MATRIX_0_WIDTH);
+
+    // Initialize body history
+    body[0][0] = led;
+    body[0][1] = led2;
+    body[0][2] = led3;
+    body[0][3] = led4;
+
+    while (1) {
+        // Clear current body (set to black)
+        for (int i = 0; i < history; i++) {
+            for (int j = 0; j < 4; j++) {
+                *body[i][j] = 0;
+            }
+        }
+
+        // Update history: shift positions
+        for (int i = history - 1; i > 0; i--) {
+            for (int j = 0; j < 4; j++) {
+                body[i][j] = body[i - 1][j];
+            }
+        }
+
+        // The new head will occupy the next position
+        body[0][0] = led;
+        body[0][1] = led2;
+        body[0][2] = led3;
+        body[0][3] = led4;
+
+        // Movement
+        switch (direction) {
+            case 1:
+                if (*(led + 2) == 201) gameOver();
+                led += 2;
+                led2 += 2;
+                led3 += 2;
+                led4 += 2;
+                break;
+            case 2:
+                if (*(led - 2) == 201) gameOver();
+                led -= 2;
+                led2 -= 2;
+                led3 -= 2;
+                led4 -= 2;
+                break;
+            case 3:
+                if (*(led - (LED_MATRIX_0_WIDTH * 2)) == 201) gameOver();
+                led -= (LED_MATRIX_0_WIDTH * 2);
+                led2 -= (LED_MATRIX_0_WIDTH * 2);
+                led3 -= (LED_MATRIX_0_WIDTH * 2);
+                led4 -= (LED_MATRIX_0_WIDTH * 2);
+                break;
+            case 4:
+                if (*(led + (LED_MATRIX_0_WIDTH * 2)) == 201) gameOver();
+                led += (LED_MATRIX_0_WIDTH * 2);
+                led2 += (LED_MATRIX_0_WIDTH * 2);
+                led3 += (LED_MATRIX_0_WIDTH * 2);
+                led4 += (LED_MATRIX_0_WIDTH * 2);
+                break;
+        }
+
+        // Direction change according to D-Pad input
+        if (*dpadR && direction != 2) direction = 1;
+        if (*dpadL && direction != 1) direction = 2;
+        if (*dpadU && direction != 4) direction = 3;
+        if (*dpadD && direction != 3) direction = 4;
+
+        // Draw the body (history)
+        for (int i = 0; i < history; i++) {
+            for (int j = 0; j < 4; j++) {
+                *body[i][j] = 201;
+            }
+        }
+
+        // Simple delay
+        for (int i = 0; i < 5000; i++);
+    }
+
+    return 0;
+}
